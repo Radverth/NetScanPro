@@ -5,64 +5,58 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Run tests before release
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-
-  tag:
-    name: Create version tag
-    needs: test
+  version:
+    name: Test & Bump Version
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.bump.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get version from package.json
-        id: get_version
-        run: echo "version=v$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Create and push tag if it doesn't exist
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Bump patch version and push tag
+        id: bump
         run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          if git ls-remote --tags origin "$VERSION" | grep -q "$VERSION"; then
-            echo "Tag $VERSION already exists, skipping tag creation"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git tag "$VERSION"
-            git push origin "$VERSION"
-          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          npm version patch --no-git-tag-version
+          VERSION="v$(node -p "require('./package.json').version")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          git add package.json package-lock.json
+          git commit -m "chore: release $VERSION [skip ci]"
+          git tag "$VERSION"
+          git push origin main --follow-tags
 
   build-windows:
     name: Build Windows (.exe)
-    needs: tag
+    needs: version
     runs-on: windows-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.version }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
       - name: Build renderer
         run: npx vite build
@@ -77,29 +71,29 @@ jobs:
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: npx electron-builder --win --publish never
 
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |
             release/*.exe
             release/latest.yml
-          retention-days: 30
+          retention-days: 7
 
   build-linux:
     name: Build Linux (.deb)
-    needs: tag
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.version }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
-        run: npm ci
+      - run: npm ci
 
       - name: Build renderer
         run: npx vite build
@@ -107,52 +101,44 @@ jobs:
       - name: Compile Electron TypeScript
         run: npx tsc -p tsconfig.electron.json
 
-      - name: Build Linux .deb package
+      - name: Build Linux .deb
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npx electron-builder --linux --publish never
 
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: |
             release/*.deb
             release/latest-linux.yml
-          retention-days: 30
+          retention-days: 7
 
   publish:
-    name: Publish GitHub Release
-    needs: [tag, build-windows, build-linux]
+    name: Publish Release
+    needs: [version, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: windows-build
           path: release/
 
-      - name: Download Linux artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: linux-build
           path: release/
 
-      - name: Publish release
-        uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.tag.outputs.version }}
+          tag_name: ${{ needs.version.outputs.version }}
           files: |
             release/*.exe
             release/*.deb
             release/latest.yml
             release/latest-linux.yml
           generate_release_notes: true
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
