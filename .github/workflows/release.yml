@@ -66,11 +66,19 @@ jobs:
         run: npx tsc -p tsconfig.electron.json
 
       - name: Build Windows installer
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: npx electron-builder --win --publish never
+          WIN_CERT: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
+          WIN_CERT_PASS: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          if [ -n "$WIN_CERT" ]; then
+            export CSC_LINK="$WIN_CERT"
+            export CSC_KEY_PASSWORD="$WIN_CERT_PASS"
+          else
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
+          npx electron-builder --win --publish never
 
       - uses: actions/upload-artifact@v4
         with:
