@@ -243,4 +243,4 @@ netscan-pro/
 
 ## License
 
-Copyright © 2026 Affinity IT. All rights reserved.
+MIT — see [LICENSE](LICENSE) for details.
