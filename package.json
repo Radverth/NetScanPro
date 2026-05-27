@@ -1,0 +1,46 @@
+{
+  "name": "netscan-pro",
+  "version": "1.0.0",
+  "description": "NetScan Pro — Affinity IT Network Discovery Tool",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"vite\" \"electron .\"",
+    "build": "tsc && vite build && tsc -p tsconfig.electron.json",
+    "dist": "npm run build && electron-builder",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src electron --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.2.1",
+    "fuse.js": "^7.0.0",
+    "net-snmp": "^3.11.2",
+    "node-nmap": "^4.0.0",
+    "p-limit": "^5.0.0",
+    "puppeteer": "^22.12.0",
+    "zustand": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "clsx": "^2.1.1",
+    "concurrently": "^8.2.2",
+    "electron": "^30.1.2",
+    "electron-builder": "^24.13.3",
+    "eslint": "^9.6.0",
+    "postcss": "^8.4.39",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3",
+    "vitest": "^2.0.2"
+  }
+}

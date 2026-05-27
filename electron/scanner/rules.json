@@ -1,0 +1,111 @@
+[
+  {
+    "deviceType": "router_firewall",
+    "label": "Router / Firewall",
+    "conditions": {
+      "ports": [443, 80, 22],
+      "osKeywords": ["cisco", "fortinet", "palo alto", "opnsense", "pfsense"],
+      "hostnameKeywords": ["router", "fw", "pf", "firewall", "gw", "gateway"]
+    }
+  },
+  {
+    "deviceType": "managed_switch",
+    "label": "Managed Switch",
+    "conditions": {
+      "ports": [161],
+      "snmpDescKeywords": ["switch", "catalyst", "procurve", "netgear gs", "unifi switch"],
+      "hostnameKeywords": ["sw", "switch"]
+    }
+  },
+  {
+    "deviceType": "wireless_ap",
+    "label": "Wireless Access Point",
+    "conditions": {
+      "ouiPrefixes": ["00:0b:86", "00:1a:1e", "04:18:d6", "dc:a6:32", "b4:fb:e4"],
+      "hostnameKeywords": ["ap", "wap", "unifi", "access-point"]
+    }
+  },
+  {
+    "deviceType": "windows_server",
+    "label": "Windows Server",
+    "conditions": {
+      "ports": [3389, 445, 135],
+      "osKeywords": ["windows server"],
+      "hostnameKeywords": ["svr", "server", "srv", "dc", "fs", "sql"]
+    }
+  },
+  {
+    "deviceType": "linux_server",
+    "label": "Linux Server",
+    "conditions": {
+      "ports": [22, 80, 443],
+      "osKeywords": ["linux", "ubuntu", "debian", "centos", "rhel"],
+      "serviceKeywords": ["httpd", "nginx", "apache", "postgres", "mysql", "docker"]
+    }
+  },
+  {
+    "deviceType": "nas_storage",
+    "label": "NAS / Storage",
+    "conditions": {
+      "ports": [5000, 5001, 2049],
+      "ouiPrefixes": ["00:11:32", "00:08:9b"],
+      "snmpDescKeywords": ["synology", "qnap", "netapp", "nas"]
+    }
+  },
+  {
+    "deviceType": "printer_mfp",
+    "label": "Printer / MFP",
+    "conditions": {
+      "ports": [9100],
+      "snmpDescKeywords": ["printer", "laserjet", "officejet", "ricoh", "xerox", "brother"],
+      "ouiPrefixes": ["00:1b:a9", "00:60:57", "00:00:48"]
+    }
+  },
+  {
+    "deviceType": "voip_phone",
+    "label": "VoIP Phone",
+    "conditions": {
+      "ports": [5060],
+      "serviceKeywords": ["sip"],
+      "hostnameKeywords": ["polycom", "yealink", "cisco79", "phone", "voip"]
+    }
+  },
+  {
+    "deviceType": "windows_pc",
+    "label": "End-User PC / Laptop",
+    "conditions": {
+      "ports": [3389, 445],
+      "osKeywords": ["windows 10", "windows 11"],
+      "hostnameKeywords": ["desktop-", "laptop-", "pc-", "ws-"]
+    }
+  },
+  {
+    "deviceType": "mac_endpoint",
+    "label": "Mac Endpoint",
+    "conditions": {
+      "osKeywords": ["macos", "mac os"],
+      "ouiPrefixes": ["00:03:93", "00:0a:95", "00:0d:93", "00:11:24", "3c:d0:f8", "f0:18:98"]
+    }
+  },
+  {
+    "deviceType": "dhcp_server",
+    "label": "DHCP Server",
+    "conditions": {
+      "ports": [67],
+      "serviceKeywords": ["dhcp"]
+    }
+  },
+  {
+    "deviceType": "dns_server",
+    "label": "DNS Server",
+    "conditions": {
+      "ports": [53],
+      "serviceKeywords": ["bind", "named", "windows dns"]
+    }
+  },
+  {
+    "deviceType": "unknown",
+    "label": "Unknown Device",
+    "conditions": {}
+  }
+]
