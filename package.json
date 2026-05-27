@@ -21,12 +21,14 @@
     "node-nmap": "^4.0.0",
     "p-limit": "^5.0.0",
     "puppeteer": "^22.12.0",
+    "uuid": "^10.0.0",
     "zustand": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.19",
     "clsx": "^2.1.1",
