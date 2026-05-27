@@ -8,10 +8,11 @@ function loadRules(): ClassificationRule[] {
   if (rulesCache) return rulesCache
 
   // Try candidate paths in order: packaged resources, compiled output, source tree
+  const electronProcess = process as NodeJS.Process & { resourcesPath?: string }
   const candidates = [
     // Packaged: process.resourcesPath/rules.json
-    ...(typeof process !== 'undefined' && process.resourcesPath
-      ? [path.join(process.resourcesPath, 'rules.json')]
+    ...(electronProcess.resourcesPath
+      ? [path.join(electronProcess.resourcesPath, 'rules.json')]
       : []),
     // Compiled dist-electron: dist-electron/scanner/../scanner/rules.json
     path.join(__dirname, 'rules.json'),
