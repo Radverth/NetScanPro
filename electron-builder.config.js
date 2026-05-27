@@ -32,10 +32,15 @@ module.exports = {
     uninstallerIcon: 'resources/icon.ico',
   },
   linux: {
-    target: [{ target: 'AppImage', arch: ['x64'] }],
+    target: [{ target: 'deb', arch: ['x64'] }],
     icon: 'resources/icon.png',
     category: 'Network',
     maintainer: 'Affinity IT',
+  },
+  deb: {
+    packageCategory: 'net',
+    priority: 'optional',
+    depends: ['libnotify4', 'libxtst6', 'libnss3'],
   },
   publish: {
     provider: 'github',
