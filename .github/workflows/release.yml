@@ -41,6 +41,14 @@ jobs:
           git tag -a "$VERSION" -m "Release $VERSION"
           git push origin "$VERSION"
 
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.version }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-windows:
     name: Build Windows (.exe)
     needs: version
@@ -71,7 +79,7 @@ jobs:
       - name: Compile Electron TypeScript
         run: npx tsc -p tsconfig.electron.json
 
-      - name: Build Windows installer
+      - name: Build and publish Windows installer
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -84,20 +92,14 @@ jobs:
           else
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          npx electron-builder --win --publish never
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: |
-            release/*.exe
-            release/latest.yml
-          retention-days: 7
+          npx electron-builder --win --publish always
 
   build-linux:
     name: Build Linux (.deb)
     needs: version
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -122,44 +124,7 @@ jobs:
       - name: Compile Electron TypeScript
         run: npx tsc -p tsconfig.electron.json
 
-      - name: Build Linux .deb
+      - name: Build and publish Linux .deb
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --publish never
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-build
-          path: |
-            release/*.deb
-            release/latest-linux.yml
-          retention-days: 7
-
-  publish:
-    name: Publish Release
-    needs: [version, build-windows, build-linux]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: windows-build
-          path: release/
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-build
-          path: release/
-
-      - uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version.outputs.version }}
-          files: |
-            release/*.exe
-            release/*.deb
-            release/latest.yml
-            release/latest-linux.yml
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --linux --publish always
