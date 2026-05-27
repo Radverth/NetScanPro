@@ -57,6 +57,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}\electron\Cache
+          key: electron-windows-${{ hashFiles('package-lock.json') }}
+
       - run: npm ci
 
       - name: Build renderer
@@ -101,6 +107,12 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+
+      - name: Cache Electron binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: electron-linux-${{ hashFiles('package-lock.json') }}
 
       - run: npm ci
 
