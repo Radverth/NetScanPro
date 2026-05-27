@@ -178,16 +178,16 @@ Update check timeout: **8 seconds** (app continues normally if offline).
 | Trigger | Workflow | Output |
 |---|---|---|
 | Push to `main` / PR | `build.yml` | TypeScript check + Vitest tests |
-| Push tag `v*` | `release.yml` | Signed `.exe` (Windows) + `.deb` (Linux) uploaded to GitHub Releases |
+| Push to `main` | `release.yml` | Auto-tags `v{version}`, builds signed `.exe` + `.deb`, publishes GitHub Release |
 
 ### Release a new version
 
 ```bash
-npm version patch   # or minor / major
-git push --follow-tags
+npm version patch   # or minor / major — bumps package.json
+git push origin main
 ```
 
-The `release.yml` workflow builds both platforms, signs the Windows installer with the EV certificate stored in GitHub Secrets, and publishes the release. electron-updater picks it up automatically on the next app launch.
+Pushing to `main` triggers `release.yml`, which reads the version from `package.json`, creates the `v{version}` git tag, builds both platforms, and publishes the GitHub Release. electron-updater picks it up automatically on the next app launch. If the tag already exists the build still runs but skips tag creation.
 
 ### Required GitHub Secrets
 

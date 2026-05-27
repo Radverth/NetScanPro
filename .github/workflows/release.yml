@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 jobs:
   test:
@@ -19,10 +18,41 @@ jobs:
       - run: npm run typecheck
       - run: npm test
 
+  tag:
+    name: Create version tag
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=v$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag if it doesn't exist
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          if git ls-remote --tags origin "$VERSION" | grep -q "$VERSION"; then
+            echo "Tag $VERSION already exists, skipping tag creation"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$VERSION"
+            git push origin "$VERSION"
+          fi
+
   build-windows:
     name: Build Windows (.exe)
-    needs: test
+    needs: tag
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -45,7 +75,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: npx electron-builder --win --publish always
+        run: npx electron-builder --win --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -58,7 +88,7 @@ jobs:
 
   build-linux:
     name: Build Linux (.deb)
-    needs: test
+    needs: tag
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -80,7 +110,7 @@ jobs:
       - name: Build Linux .deb package
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --publish always
+        run: npx electron-builder --linux --publish never
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -91,16 +121,14 @@ jobs:
             release/latest-linux.yml
           retention-days: 30
 
-  create-release:
-    name: Create GitHub Release
-    needs: [build-windows, build-linux]
+  publish:
+    name: Publish GitHub Release
+    needs: [tag, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
@@ -114,9 +142,10 @@ jobs:
           name: linux-build
           path: release/
 
-      - name: Create Release
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.tag.outputs.version }}
           files: |
             release/*.exe
             release/*.deb
