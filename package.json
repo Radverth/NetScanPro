@@ -1,6 +1,6 @@
 {
   "name": "netscan-pro",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "NetScan Pro — Affinity IT Network Discovery Tool",
   "main": "dist-electron/main.js",
   "scripts": {
