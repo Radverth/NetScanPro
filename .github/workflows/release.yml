@@ -92,7 +92,7 @@ jobs:
           else
             export CSC_IDENTITY_AUTO_DISCOVERY=false
           fi
-          npx electron-builder --win --publish always
+          npx electron-builder --win nsis --x64 --config electron-builder.config.js --publish always
 
   build-linux:
     name: Build Linux (.deb)
@@ -127,4 +127,4 @@ jobs:
       - name: Build and publish Linux .deb
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --linux --publish always
+        run: npx electron-builder --linux deb --x64 --config electron-builder.config.js --publish always
