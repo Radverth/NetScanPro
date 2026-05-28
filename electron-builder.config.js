@@ -9,7 +9,6 @@ module.exports = {
   files: [
     'dist/**/*',
     'dist-electron/**/*',
-    '!node_modules/**/*',
   ],
   extraResources: [
     { from: 'electron/scanner/rules.json', to: 'rules.json' },
