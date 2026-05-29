@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'path'
 import { autoUpdater } from 'electron-updater'
+import log from './logger'
 import { registerScanHandlers } from './ipc/scan.ipc'
 import { registerITGlueHandlers } from './ipc/itglue.ipc'
 import { registerPDFHandlers } from './ipc/pdf.ipc'
@@ -56,6 +57,7 @@ function setupAutoUpdater(): void {
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-available', (info) => {
+    log.info(`Update available: ${info.version}`)
     mainWindow?.webContents.send('updater:update-available', {
       version: info.version,
       releaseNotes: info.releaseNotes,
@@ -72,18 +74,19 @@ function setupAutoUpdater(): void {
   })
 
   autoUpdater.on('update-downloaded', (info) => {
+    log.info(`Update downloaded: ${info.version}`)
     mainWindow?.webContents.send('updater:update-downloaded', {
       version: info.version,
     })
   })
 
   autoUpdater.on('error', (err) => {
-    console.error('Auto-updater error:', err)
+    log.error('Auto-updater error:', err)
   })
 
   // Check for updates after window is ready
   setTimeout(() => {
-    autoUpdater.checkForUpdatesAndNotify().catch(console.error)
+    autoUpdater.checkForUpdatesAndNotify().catch((err) => log.error('Update check failed:', err))
   }, 3000)
 }
 
@@ -98,6 +101,8 @@ function registerStoreHandlers(): void {
 }
 
 app.whenReady().then(() => {
+  log.info(`NetScan Pro starting — electron ${process.versions.electron}, node ${process.versions.node}`)
+  log.info(`Log file: ${log.transports.file.getFile().path}`)
   createWindow()
   registerScanHandlers(mainWindow)
   registerITGlueHandlers()

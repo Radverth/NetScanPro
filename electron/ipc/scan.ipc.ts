@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { v4 as uuidv4 } from 'uuid'
+import log from '../logger'
 import type { ScanConfig, ScanSession, ScanProgress, DiscoveredHost, SubnetInfo } from '../types'
 import { runArpSweep } from '../scanner/arp'
 import { runNmapScan } from '../scanner/nmap'
@@ -36,6 +37,8 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
     const startedAt = new Date()
     const win = mainWindow
 
+    log.info(`Scan started — session=${sessionId} range=${config.ipRange} speed=${config.speed}`)
+
     try {
       // Phase 0: ARP Sweep
       emitProgress(win, {
@@ -49,6 +52,7 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
       })
 
       const arpEntries = await runArpSweep(config.ipRange, signal)
+      log.info(`ARP sweep complete — ${arpEntries.length} hosts found`)
       if (signal.aborted) throw new Error('Scan cancelled')
 
       const totalHosts = arpEntries.length
@@ -83,7 +87,9 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
       })
 
       const ips = arpEntries.map((e) => e.ip)
+      log.info(`Nmap scan starting — ${ips.length} hosts`)
       const nmapResults = await runNmapScan(ips, config.speed, signal)
+      log.info(`Nmap scan complete — ${nmapResults.size} results`)
       if (signal.aborted) throw new Error('Scan cancelled')
 
       for (const [ip, nmapInfo] of nmapResults.entries()) {
@@ -228,6 +234,8 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
         })
       }
 
+      log.info(`Classification complete — ${discoveredHosts.length} hosts classified`)
+
       // Phase 7: Subnet derivation
       const subnets: SubnetInfo[] = deriveSubnets(discoveredHosts)
       const dhcpServers = discoveredHosts.filter((h) => h.deviceType === 'dhcp_server')
@@ -259,13 +267,19 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
         percentComplete: 100,
       })
 
+      const duration = completedAt.getTime() - startedAt.getTime()
+      log.info(`Scan complete — ${discoveredHosts.length} hosts, ${subnets.length} subnets, ${duration}ms`)
+
       addScanToHistory(session)
       win?.webContents.send('scan:complete', session)
       return session
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       if (message !== 'Scan cancelled') {
+        log.error(`Scan error — ${message}`)
         win?.webContents.send('scan:error', message)
+      } else {
+        log.info('Scan cancelled by user')
       }
       throw err
     } finally {
