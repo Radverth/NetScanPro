@@ -17,9 +17,6 @@ module.exports = {
     target: [{ target: 'nsis', arch: ['x64'] }],
     icon: 'resources/icon.ico',
     requestedExecutionLevel: 'requireAdministrator',
-    publisherName: 'Affinity IT',
-    signingHashAlgorithms: ['sha256'],
-    sign: null,
   },
   nsis: {
     oneClick: false,
