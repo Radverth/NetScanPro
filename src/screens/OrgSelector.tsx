@@ -6,6 +6,13 @@ import OrgSearchInput from '../components/OrgSearchInput'
 import SettingsModal from '../components/SettingsModal'
 import type { ITGlueOrg } from '../../electron/types'
 
+function isContainerSubnet(cidr: string): boolean {
+  const first = parseInt(cidr.split('.')[0], 10)
+  const second = parseInt(cidr.split('.')[1], 10)
+  return first === 100 || (first === 172 && (second === 17 || second === 18)) || (first === 10 && second === 0 && parseInt(cidr.split('.')[2], 10) === 2)
+}
+
+
 export default function OrgSelector(): React.ReactElement {
   const {
     mode,
@@ -26,7 +33,12 @@ export default function OrgSelector(): React.ReactElement {
   const [isCreatingOrg, setIsCreatingOrg] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
   const [newOrgDomain, setNewOrgDomain] = useState('')
+  const [detectedSubnet, setDetectedSubnet] = useState('')
   const { createOrg } = useIPC()
+
+  useEffect(() => {
+    window.electronAPI?.app.detectSubnet().then(setDetectedSubnet)
+  }, [])
 
   useEffect(() => {
     getStoreValue('mode').then((storedMode) => {
@@ -250,15 +262,20 @@ export default function OrgSelector(): React.ReactElement {
                     {/* IP range */}
                     <div>
                       <label className="mb-1.5 block text-xs font-medium text-slate-400">
-                        IP Range Override
+                        IP Range
                       </label>
                       <input
                         type="text"
                         value={scanConfig.ipRange ?? ''}
                         onChange={(e) => setScanConfig({ ipRange: e.target.value || undefined })}
-                        placeholder="Auto-detect from NIC (e.g. 192.168.1.0/24)"
+                        placeholder={detectedSubnet ? `Auto: ${detectedSubnet}` : 'e.g. 192.168.1.0/24'}
                         className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 text-xs text-slate-100 placeholder-slate-500 focus:border-amber-400/50 focus:outline-none"
                       />
+                      {detectedSubnet && !scanConfig.ipRange && isContainerSubnet(detectedSubnet) && (
+                        <p className="mt-1.5 text-xs text-amber-400">
+                          Virtual network detected ({detectedSubnet}). Enter your actual LAN range above, e.g. 192.168.4.0/24.
+                        </p>
+                      )}
                     </div>
 
                     {/* SNMP community */}

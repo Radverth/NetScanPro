@@ -25,6 +25,11 @@ declare global {
         get: (key: string) => Promise<unknown>
         set: (key: string, value: unknown) => Promise<void>
       }
+      app: {
+        getVersion: () => Promise<string>
+        showLog: () => Promise<void>
+        detectSubnet: () => Promise<string>
+      }
       updater: {
         installNow: () => Promise<void>
         checkForUpdates: () => Promise<void>

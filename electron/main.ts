@@ -11,13 +11,11 @@ const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
 
-function buildMenu(): Menu {
-  const isMac = process.platform === 'darwin'
-  const template: (Electron.MenuItemConstructorOptions | MenuItem)[] = []
+function buildMenu(): Menu | null {
+  if (process.platform !== 'darwin') return null
 
-  // macOS requires a first app menu entry
-  if (isMac) {
-    template.push({
+  return Menu.buildFromTemplate([
+    {
       label: app.name,
       submenu: [
         { role: 'about' },
@@ -30,9 +28,8 @@ function buildMenu(): Menu {
         { type: 'separator' },
         { role: 'quit' },
       ],
-    })
-    // Edit menu (copy/paste/select-all for text fields)
-    template.push({
+    },
+    {
       label: 'Edit',
       submenu: [
         { role: 'undo' },
@@ -43,32 +40,8 @@ function buildMenu(): Menu {
         { role: 'paste' },
         { role: 'selectAll' },
       ],
-    })
-  }
-
-  template.push({
-    label: 'Help',
-    submenu: [
-      {
-        label: 'Check for Updates…',
-        click: () => {
-          if (isDev) return
-          autoUpdater.checkForUpdates().catch((err) => log.error('Manual update check failed:', err))
-        },
-      },
-      { type: 'separator' },
-      {
-        label: `NetScan Pro v${app.getVersion()}`,
-        enabled: false,
-      },
-      {
-        label: 'View Log File',
-        click: () => shell.showItemInFolder(log.transports.file.getFile().path),
-      },
-    ],
-  })
-
-  return Menu.buildFromTemplate(template)
+    },
+  ])
 }
 
 function createWindow(): void {
@@ -169,17 +142,32 @@ function registerStoreHandlers(): void {
   })
 }
 
+function registerAppHandlers(): void {
+  ipcMain.handle('app:version', () => app.getVersion())
+
+  ipcMain.handle('app:show-log', () => {
+    shell.showItemInFolder(log.transports.file.getFile().path)
+  })
+
+  ipcMain.handle('app:detect-subnet', async () => {
+    const { detectLocalSubnet } = await import('./scanner/arp')
+    return detectLocalSubnet()
+  })
+}
+
 app.whenReady().then(() => {
   log.info(`NetScan Pro starting — electron ${process.versions.electron}, node ${process.versions.node}`)
   log.info(`Log file: ${log.transports.file.getFile().path}`)
 
-  Menu.setApplicationMenu(buildMenu())
+  const menu = buildMenu()
+  Menu.setApplicationMenu(menu)
 
   createWindow()
   registerScanHandlers(mainWindow)
   registerITGlueHandlers()
   registerPDFHandlers()
   registerStoreHandlers()
+  registerAppHandlers()
   setupAutoUpdater()
 
   app.on('activate', () => {

@@ -81,6 +81,17 @@ const electronAPI = {
       ipcRenderer.invoke('store:set', key, value),
   },
 
+  app: {
+    getVersion: (): Promise<string> =>
+      ipcRenderer.invoke('app:version'),
+
+    showLog: (): Promise<void> =>
+      ipcRenderer.invoke('app:show-log'),
+
+    detectSubnet: (): Promise<string> =>
+      ipcRenderer.invoke('app:detect-subnet'),
+  },
+
   updater: {
     installNow: (): Promise<void> =>
       ipcRenderer.invoke('updater:install-now'),

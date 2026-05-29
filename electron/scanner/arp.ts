@@ -155,7 +155,7 @@ async function readArpTable(baseIp: string): Promise<ARPEntry[]> {
   return entries
 }
 
-function detectLocalSubnet(): string {
+export function detectLocalSubnet(): string {
   const interfaces = os.networkInterfaces()
   const candidates: Array<{ address: string; score: number }> = []
 

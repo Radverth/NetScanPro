@@ -10,15 +10,16 @@ export default function SettingsModal(): React.ReactElement | null {
   const [isValidating, setIsValidating] = useState(false)
   const [validationResult, setValidationResult] = useState<'valid' | 'invalid' | null>(null)
   const [selectedMode, setSelectedMode] = useState<'itglue' | 'standalone'>(mode)
+  const [appVersion, setAppVersion] = useState('')
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false)
 
   useEffect(() => {
     if (settingsOpen) {
       setSelectedMode(mode)
       getStoreValue('apiKey').then((key) => {
-        if (typeof key === 'string' && key) {
-          setApiKey('●'.repeat(20))
-        }
+        if (typeof key === 'string' && key) setApiKey('●'.repeat(20))
       })
+      window.electronAPI?.app.getVersion().then(setAppVersion)
     }
   }, [settingsOpen, mode, getStoreValue])
 
@@ -43,6 +44,15 @@ export default function SettingsModal(): React.ReactElement | null {
     await setStoreValue('mode', selectedMode)
     setMode(selectedMode)
     setSettingsOpen(false)
+  }
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingUpdate(true)
+    try {
+      await window.electronAPI?.updater.checkForUpdates()
+    } finally {
+      setTimeout(() => setIsCheckingUpdate(false), 3000)
+    }
   }
 
   if (!settingsOpen) return null
@@ -101,9 +111,7 @@ export default function SettingsModal(): React.ReactElement | null {
           {/* API Key */}
           {selectedMode === 'itglue' && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-300">
-                IT Glue API Key
-              </label>
+              <label className="mb-2 block text-sm font-medium text-slate-300">IT Glue API Key</label>
               <div className="flex gap-2">
                 <input
                   type="password"
@@ -131,6 +139,31 @@ export default function SettingsModal(): React.ReactElement | null {
               )}
             </div>
           )}
+
+          {/* About / Updates */}
+          <div className="rounded-lg border border-slate-700 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-slate-100">NetScan Pro</p>
+                {appVersion && (
+                  <p className="text-xs text-slate-400">Version {appVersion}</p>
+                )}
+              </div>
+              <button
+                onClick={handleCheckForUpdates}
+                disabled={isCheckingUpdate}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:border-slate-500 hover:text-slate-100 disabled:opacity-40"
+              >
+                {isCheckingUpdate ? 'Checking…' : 'Check for Updates'}
+              </button>
+            </div>
+            <button
+              onClick={() => window.electronAPI?.app.showLog()}
+              className="text-xs text-slate-500 hover:text-slate-300"
+            >
+              View log file
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
