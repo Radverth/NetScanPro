@@ -3,7 +3,12 @@ import type { ScanConfig, ScanSession, ScanProgress, ITGlueOrg, SyncResult } fro
 
 // Whitelist of valid IPC channels
 const SCAN_CHANNELS = ['scan:progress', 'scan:complete', 'scan:error'] as const
-const UPDATER_CHANNELS = ['updater:update-available', 'updater:download-progress', 'updater:update-downloaded'] as const
+const UPDATER_CHANNELS = [
+  'updater:update-available',
+  'updater:download-progress',
+  'updater:update-downloaded',
+  'updater:error',
+] as const
 
 type ScanChannel = (typeof SCAN_CHANNELS)[number]
 type UpdaterChannel = (typeof UPDATER_CHANNELS)[number]
@@ -77,6 +82,12 @@ const electronAPI = {
   },
 
   updater: {
+    installNow: (): Promise<void> =>
+      ipcRenderer.invoke('updater:install-now'),
+
+    checkForUpdates: (): Promise<void> =>
+      ipcRenderer.invoke('updater:check'),
+
     onUpdateAvailable: (callback: (info: { version: string }) => void): (() => void) => {
       const channel = 'updater:update-available'
       if (!isValidUpdaterChannel(channel)) return () => {}
@@ -97,6 +108,14 @@ const electronAPI = {
       const channel = 'updater:update-downloaded'
       if (!isValidUpdaterChannel(channel)) return () => {}
       const handler = (_event: Electron.IpcRendererEvent, info: { version: string }) => callback(info)
+      ipcRenderer.on(channel, handler)
+      return () => ipcRenderer.removeListener(channel, handler)
+    },
+
+    onError: (callback: (info: { message: string }) => void): (() => void) => {
+      const channel = 'updater:error'
+      if (!isValidUpdaterChannel(channel)) return () => {}
+      const handler = (_event: Electron.IpcRendererEvent, info: { message: string }) => callback(info)
       ipcRenderer.on(channel, handler)
       return () => ipcRenderer.removeListener(channel, handler)
     },

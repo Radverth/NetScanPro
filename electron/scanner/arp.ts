@@ -1,6 +1,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as os from 'os'
+import log from '../logger'
 import type { ARPEntry } from '../types'
 
 const execAsync = promisify(exec)
@@ -16,6 +17,7 @@ interface RawARPEntry {
  */
 export async function runArpSweep(ipRange?: string, signal?: AbortSignal): Promise<ARPEntry[]> {
   const range = ipRange || detectLocalSubnet()
+  if (!ipRange) log.info(`Auto-detected subnet: ${range}`)
 
   // Try arp-scan first (Linux, requires root)
   if (process.platform === 'linux') {

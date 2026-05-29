@@ -37,7 +37,7 @@ export function registerScanHandlers(mainWindow: BrowserWindow | null): void {
     const startedAt = new Date()
     const win = mainWindow
 
-    log.info(`Scan started — session=${sessionId} range=${config.ipRange} speed=${config.speed}`)
+    log.info(`Scan started — session=${sessionId} range=${config.ipRange ?? 'auto'} speed=${config.speed}`)
 
     try {
       // Phase 0: ARP Sweep
