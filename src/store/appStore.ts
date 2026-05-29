@@ -17,6 +17,8 @@ interface AppState {
   isSyncing: boolean
   updateAvailable: boolean
   updateVersion: string
+  updateProgress: number
+  updateDownloaded: boolean
   exportedPdfPath: string | null
   settingsOpen: boolean
 
@@ -32,6 +34,8 @@ interface AppState {
   setSyncResult: (result: SyncResult | null) => void
   setIsSyncing: (syncing: boolean) => void
   setUpdateAvailable: (available: boolean, version?: string) => void
+  setUpdateProgress: (percent: number) => void
+  setUpdateDownloaded: (downloaded: boolean) => void
   setExportedPdfPath: (path: string | null) => void
   setSettingsOpen: (open: boolean) => void
   reset: () => void
@@ -58,6 +62,8 @@ export const useAppStore = create<AppState>((set) => ({
   isSyncing: false,
   updateAvailable: false,
   updateVersion: '',
+  updateProgress: 0,
+  updateDownloaded: false,
   exportedPdfPath: null,
   settingsOpen: false,
 
@@ -75,6 +81,8 @@ export const useAppStore = create<AppState>((set) => ({
   setIsSyncing: (syncing) => set({ isSyncing: syncing }),
   setUpdateAvailable: (available, version = '') =>
     set({ updateAvailable: available, updateVersion: version }),
+  setUpdateProgress: (percent) => set({ updateProgress: percent }),
+  setUpdateDownloaded: (downloaded) => set({ updateDownloaded: downloaded }),
   setExportedPdfPath: (path) => set({ exportedPdfPath: path }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   reset: () =>

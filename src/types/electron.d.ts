@@ -26,9 +26,12 @@ declare global {
         set: (key: string, value: unknown) => Promise<void>
       }
       updater: {
+        installNow: () => Promise<void>
+        checkForUpdates: () => Promise<void>
         onUpdateAvailable: (callback: (info: { version: string }) => void) => () => void
         onUpdateProgress: (callback: (progress: { percent: number }) => void) => () => void
         onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void
+        onError: (callback: (info: { message: string }) => void) => () => void
       }
     }
   }

@@ -1,6 +1,7 @@
 import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as os from 'os'
+import log from '../logger'
 import type { ARPEntry } from '../types'
 
 const execAsync = promisify(exec)
@@ -16,6 +17,7 @@ interface RawARPEntry {
  */
 export async function runArpSweep(ipRange?: string, signal?: AbortSignal): Promise<ARPEntry[]> {
   const range = ipRange || detectLocalSubnet()
+  if (!ipRange) log.info(`Auto-detected subnet: ${range}`)
 
   // Try arp-scan first (Linux, requires root)
   if (process.platform === 'linux') {
@@ -67,34 +69,53 @@ async function runArpScan(range: string, signal?: AbortSignal): Promise<ARPEntry
 async function pingSweepAndArp(range: string, signal?: AbortSignal): Promise<ARPEntry[]> {
   if (signal?.aborted) return []
 
-  // Parse range like "192.168.1.0/24" → base + count
   const { baseIp, size } = parseRange(range)
-  const pingPromises: Promise<void>[] = []
-  const batchSize = 20
+  const hostCount = Math.min(size - 1, 254)
+  const batchSize = 32
+  const respondingIps = new Set<string>()
 
-  // Ping sweep to populate ARP cache
-  for (let i = 1; i < Math.min(size, 255); i++) {
+  // Ping sweep in concurrent batches, track which IPs respond
+  for (let batch = 0; batch < hostCount; batch += batchSize) {
     if (signal?.aborted) break
-    const ip = `${baseIp}.${i}`
-    const pingCmd = process.platform === 'win32'
-      ? `ping -n 1 -w 500 ${ip}`
-      : `ping -c 1 -W 1 ${ip}`
-
-    const p = execAsync(pingCmd, { timeout: 2000 }).catch(() => {})
-    pingPromises.push(p as Promise<void>)
-
-    // Batch pings
-    if (pingPromises.length >= batchSize) {
-      await Promise.allSettled(pingPromises.splice(0, batchSize))
-      if (signal?.aborted) break
+    const end = Math.min(batch + batchSize, hostCount)
+    const tasks = []
+    for (let i = batch + 1; i <= end; i++) {
+      const ip = `${baseIp}.${i}`
+      const pingCmd = process.platform === 'win32'
+        ? `ping -n 1 -w 800 ${ip}`
+        : `ping -c 1 -W 1 ${ip}`
+      tasks.push(
+        execAsync(pingCmd, { timeout: 2500 })
+          .then(() => respondingIps.add(ip))
+          .catch(() => {}),
+      )
     }
+    await Promise.allSettled(tasks)
   }
-  await Promise.allSettled(pingPromises)
 
   if (signal?.aborted) return []
 
-  // Read ARP table
-  return readArpTable(baseIp)
+  // Read ARP table to get MACs for responding hosts
+  const arpEntries = await readArpTable(baseIp)
+  const arpMap = new Map(arpEntries.map((e) => [e.ip, e]))
+
+  // Merge: ARP table wins for MAC/vendor; ping-only hosts get unknown MAC
+  // (important for environments like Crostini where ARP table is limited)
+  const result: ARPEntry[] = []
+  for (const ip of respondingIps) {
+    if (arpMap.has(ip)) {
+      result.push(arpMap.get(ip)!)
+    } else {
+      result.push({ ip, mac: '00:00:00:00:00:00', vendor: 'Unknown' })
+    }
+  }
+
+  // Also include ARP-only entries (hosts that didn't respond to ping but are in table)
+  for (const entry of arpEntries) {
+    if (!respondingIps.has(entry.ip)) result.push(entry)
+  }
+
+  return result
 }
 
 async function readArpTable(baseIp: string): Promise<ARPEntry[]> {
@@ -136,16 +157,32 @@ async function readArpTable(baseIp: string): Promise<ARPEntry[]> {
 
 function detectLocalSubnet(): string {
   const interfaces = os.networkInterfaces()
+  const candidates: Array<{ address: string; score: number }> = []
+
   for (const iface of Object.values(interfaces)) {
     if (!iface) continue
     for (const addr of iface) {
-      if (addr.family === 'IPv4' && !addr.internal) {
-        const parts = addr.address.split('.')
-        return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
-      }
+      if (addr.family !== 'IPv4' || addr.internal) continue
+      const first = parseInt(addr.address.split('.')[0], 10)
+      const second = parseInt(addr.address.split('.')[1], 10)
+
+      let score = 0
+      if (first === 192 && second === 168) score = 100        // classic LAN
+      else if (first === 10) score = 80                       // RFC-1918 class A
+      else if (first === 172 && second >= 16 && second <= 31
+               && second !== 17 && second !== 18) score = 60  // RFC-1918 class B (skip Docker)
+      else score = 10                                         // CGNAT, Crostini (100.x), etc.
+
+      candidates.push({ address: addr.address, score })
     }
   }
-  return '192.168.1.0/24'
+
+  if (candidates.length === 0) return '192.168.1.0/24'
+
+  candidates.sort((a, b) => b.score - a.score)
+  const best = candidates[0].address
+  const parts = best.split('.')
+  return `${parts[0]}.${parts[1]}.${parts[2]}.0/24`
 }
 
 function parseRange(cidr: string): { baseIp: string; size: number } {
